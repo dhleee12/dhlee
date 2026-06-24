@@ -1,0 +1,517 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>업무 현황 대시보드</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700;900&display=swap');
+  :root {
+    --bg:#0f1117;--surface:#1a1d27;--surface2:#22263a;
+    --accent:#4f8ef7;--accent2:#7c5cfc;
+    --green:#22c55e;--yellow:#f59e0b;--red:#ef4444;
+    --text:#e8eaf0;--muted:#7a7f9a;--border:#2a2e42;
+  }
+  *{margin:0;padding:0;box-sizing:border-box;}
+  body{font-family:'Noto Sans KR',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;padding:28px;}
+  .header{display:flex;justify-content:space-between;align-items:flex-end;margin-bottom:32px;padding-bottom:20px;border-bottom:1px solid var(--border);}
+  .header-left h1{font-size:22px;font-weight:700;letter-spacing:-0.5px;}
+  .header-left p{font-size:12px;color:var(--muted);margin-top:4px;}
+  .header-right{font-size:12px;color:var(--muted);text-align:right;}
+  .header-right span{display:block;font-size:18px;font-weight:700;color:var(--accent);}
+  .grid{display:grid;gap:16px;}
+  .row-kpi{grid-template-columns:repeat(4,1fr);}
+  .row-main{grid-template-columns:2fr 1fr;}
+  .card{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:22px;position:relative;overflow:hidden;}
+  .card::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,var(--accent),var(--accent2));opacity:0;transition:opacity 0.3s;}
+  .card:hover::before{opacity:1;}
+  .card-label{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:0.8px;margin-bottom:10px;font-weight:500;}
+  .card-value{font-size:28px;font-weight:900;letter-spacing:-1px;line-height:1;}
+  .card-sub{font-size:11px;color:var(--muted);margin-top:6px;}
+  .badge{display:inline-block;padding:2px 8px;border-radius:20px;font-size:10px;font-weight:700;margin-top:8px;}
+  .badge.up{background:rgba(34,197,94,0.15);color:var(--green);}
+  .badge.warn{background:rgba(245,158,11,0.15);color:var(--yellow);}
+  .badge.down{background:rgba(239,68,68,0.15);color:var(--red);}
+  .section-title{font-size:13px;font-weight:700;color:var(--text);margin-bottom:18px;display:flex;align-items:center;gap:8px;}
+  .section-title::after{content:'';flex:1;height:1px;background:var(--border);}
+  .chart-wrap{position:relative;height:220px;}
+  .month-tabs{display:flex;gap:6px;margin-bottom:14px;flex-wrap:wrap;}
+  .month-tab{padding:4px 12px;border-radius:20px;font-size:11px;font-weight:600;cursor:pointer;border:1px solid var(--border);background:var(--surface2);color:var(--muted);transition:all 0.2s;}
+  .month-tab:hover{border-color:var(--accent);color:var(--accent);}
+  .month-tab.active{background:var(--accent);color:#fff;border-color:var(--accent);}
+  .channel-table{width:100%;border-collapse:collapse;}
+  .channel-table th{font-size:10px;color:var(--muted);text-align:left;padding:0 0 10px 0;font-weight:500;border-bottom:1px solid var(--border);}
+  .channel-table th:last-child{text-align:right;}
+  .channel-table td{padding:9px 0;font-size:12px;border-bottom:1px solid var(--border);vertical-align:middle;}
+  .channel-table td:last-child{text-align:right;}
+  .channel-table tr:last-child td{border-bottom:none;}
+  .ch-name{font-weight:600;}
+  .ch-bar-wrap{width:90px;display:inline-block;vertical-align:middle;margin-left:8px;}
+  .ch-bar{height:4px;border-radius:2px;background:linear-gradient(90deg,var(--accent),var(--accent2));}
+  .ch-amount{color:var(--text);font-weight:600;}
+  .task-item{display:flex;align-items:flex-start;gap:12px;padding:10px 0;border-bottom:1px solid var(--border);}
+  .task-item:last-child{border-bottom:none;}
+  .task-dot{width:8px;height:8px;border-radius:50%;margin-top:5px;flex-shrink:0;}
+  .dot-progress{background:var(--accent);}
+  .dot-wait{background:var(--yellow);}
+  .task-body{flex:1;}
+  .task-title{font-size:12px;font-weight:600;}
+  .task-desc{font-size:11px;color:var(--muted);margin-top:2px;}
+  .task-status{font-size:10px;font-weight:700;padding:2px 8px;border-radius:20px;white-space:nowrap;margin-top:2px;display:inline-block;}
+  .status-progress{background:rgba(79,142,247,0.15);color:var(--accent);}
+  .status-wait{background:rgba(245,158,11,0.15);color:var(--yellow);}
+  .event-tag{font-size:10px;padding:2px 8px;border-radius:20px;font-weight:700;}
+  .tag-active{background:rgba(34,197,94,0.15);color:var(--green);}
+  .tag-plan{background:rgba(124,92,252,0.15);color:var(--accent2);}
+  .goal-section{margin-top:16px;}
+  .goal-row{margin-bottom:14px;}
+  .goal-top{display:flex;justify-content:space-between;font-size:11px;margin-bottom:5px;}
+  .goal-label{font-weight:600;}
+  .goal-pct{color:var(--accent);font-weight:700;}
+  .goal-bar-bg{height:6px;background:var(--surface2);border-radius:3px;overflow:hidden;}
+  .goal-bar-fill{height:100%;border-radius:3px;background:linear-gradient(90deg,var(--accent),var(--accent2));transition:width 1s ease;}
+  .rank-controls{display:flex;gap:8px;margin-bottom:14px;align-items:center;flex-wrap:wrap;}
+  .rank-select{background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:8px;padding:5px 10px;font-size:11px;font-family:'Noto Sans KR',sans-serif;cursor:pointer;outline:none;}
+  .rank-select:focus{border-color:var(--accent);}
+  .rank-search{background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:8px;padding:5px 10px;font-size:11px;font-family:'Noto Sans KR',sans-serif;outline:none;flex:1;min-width:140px;}
+  .rank-search:focus{border-color:var(--accent);}
+  .rank-search::placeholder{color:var(--muted);}
+  .rank-count{font-size:11px;color:var(--muted);margin-left:auto;}
+  .rank-table{width:100%;border-collapse:collapse;}
+  .rank-table th{font-size:10px;color:var(--muted);text-align:left;padding:0 6px 10px 6px;font-weight:500;border-bottom:1px solid var(--border);white-space:nowrap;}
+  .rank-table th:nth-child(1){text-align:center;width:36px;}
+  .rank-table th:nth-child(3),.rank-table th:nth-child(4),.rank-table th:nth-child(5),.rank-table th:nth-child(6){text-align:right;}
+  .rank-table td{padding:8px 6px;font-size:11px;border-bottom:1px solid var(--border);vertical-align:middle;}
+  .rank-table td:nth-child(1){text-align:center;}
+  .rank-table td:nth-child(3),.rank-table td:nth-child(4),.rank-table td:nth-child(5),.rank-table td:nth-child(6){text-align:right;}
+  .rank-table tr:last-child td{border-bottom:none;}
+  .rank-badge{display:inline-flex;align-items:center;justify-content:center;width:24px;height:24px;border-radius:50%;font-size:10px;font-weight:700;}
+  .rank-1{background:rgba(255,200,0,0.2);color:#ffc800;}
+  .rank-2{background:rgba(180,190,200,0.2);color:#b4bec8;}
+  .rank-3{background:rgba(210,140,90,0.2);color:#d28c5a;}
+  .rank-n{background:var(--surface2);color:var(--muted);}
+  .rank-name{font-weight:500;color:var(--text);}
+  .rank-code{font-size:10px;color:var(--muted);margin-top:1px;}
+  .amount-accent{color:var(--accent);font-weight:700;}
+  .rank-pagination{display:flex;gap:6px;margin-top:14px;justify-content:center;align-items:center;}
+  .page-btn{padding:4px 10px;border-radius:6px;font-size:11px;cursor:pointer;border:1px solid var(--border);background:var(--surface2);color:var(--muted);transition:all 0.2s;}
+  .page-btn:hover,.page-btn.active{background:var(--accent);color:#fff;border-color:var(--accent);}
+  @media(max-width:900px){.row-kpi{grid-template-columns:repeat(2,1fr);}.row-main{grid-template-columns:1fr;}}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-left">
+    <h1>업무 현황 대시보드</h1>
+    <p>네이버 · 자사몰 | 2026년 7월 보고</p>
+  </div>
+  <div class="header-right" style="display:flex;flex-direction:column;align-items:flex-end;gap:8px;">
+    <div>보고일<span id="today-date"></span></div>
+    <a href="https://docs.google.com/spreadsheets/d/1NR25FHiRo56FGnPoMpbDDAxmkuLhO1eq/edit?usp=drive_link&ouid=102652182102213041229&rtpof=true&sd=true" target="_blank"
+      style="display:inline-flex;align-items:center;gap:6px;padding:5px 12px;background:rgba(79,142,247,0.1);border:1px solid rgba(79,142,247,0.3);border-radius:8px;text-decoration:none;color:var(--accent);font-size:11px;font-weight:600;transition:all 0.2s;"
+      onmouseover="this.style.background='rgba(79,142,247,0.2)'" onmouseout="this.style.background='rgba(79,142,247,0.1)'">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+      통합 마스터 데이터 ↗
+    </a>
+  </div>
+</div>
+
+<div class="grid row-kpi" style="margin-bottom:16px;">
+  <div class="card">
+    <div class="card-label">6월 총 매출 <span style="color:var(--muted);font-size:9px;font-weight:400;">+VAT</span></div>
+    <div class="card-value" style="font-size:22px;">43,103,915</div>
+    <div class="card-sub">원</div>
+    <span class="badge down">목표 대비 86.2%</span>
+  </div>
+  <div class="card">
+    <div class="card-label">5월 총 매출 <span style="color:var(--muted);font-size:9px;font-weight:400;">+VAT</span></div>
+    <div class="card-value" style="font-size:22px;">59,888,030</div>
+    <div class="card-sub">원</div>
+    <span class="badge up">목표 대비 119.8%</span>
+  </div>
+  <div class="card">
+    <div class="card-label">월 목표</div>
+    <div class="card-value" style="font-size:22px;">50,000,000</div>
+    <div class="card-sub">원 (7월)</div>
+    <span class="badge warn">진행 중</span>
+  </div>
+  <div class="card">
+    <div class="card-label">진행 업무</div>
+    <div class="card-value">5</div>
+    <div class="card-sub">7월 행사 항목</div>
+    <span class="badge warn">대기 1건 포함</span>
+  </div>
+</div>
+
+<!-- 자사몰 감소 원인 + 마감 예상 매출 -->
+<div class="grid" style="grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px;">
+  <div class="card">
+    <div class="section-title">자사몰 매출 감소 원인 분석</div>
+    <div style="display:flex;flex-direction:column;gap:10px;">
+      <div style="background:var(--surface2);border-radius:10px;padding:16px;">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+          <span style="background:rgba(245,158,11,0.15);color:var(--yellow);font-size:10px;font-weight:700;padding:2px 8px;border-radius:20px;">분석 중</span>
+          <span style="font-size:11px;color:var(--muted);">6월 → 7월</span>
+        </div>
+        <div style="font-size:12px;color:var(--muted);line-height:1.8;">
+          <div style="display:flex;align-items:flex-start;gap:8px;margin-bottom:6px;">
+            <span style="color:var(--yellow);margin-top:1px;">⚠</span>
+            <span>자사몰 매출 감소 원인 파악 중</span>
+          </div>
+          <div style="display:flex;align-items:flex-start;gap:8px;margin-bottom:6px;">
+            <span style="color:var(--yellow);margin-top:1px;">⚠</span>
+            <span>김준규 차장 확인 후 업데이트 예정</span>
+          </div>
+          <div style="display:flex;align-items:flex-start;gap:8px;">
+            <span style="color:var(--muted);margin-top:1px;">·</span>
+            <span style="color:var(--muted);">5월 28,834,190원 → 6월 16,854,100원</span>
+          </div>
+        </div>
+        <div style="margin-top:12px;padding-top:10px;border-top:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;">
+          <span style="font-size:11px;color:var(--muted);">전월 대비 감소액</span>
+          <span style="font-size:13px;font-weight:700;color:var(--red);">▼ 11,980,090원</span>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="card">
+    <div class="section-title">이번달 마감 예상 매출</div>
+    <div style="display:flex;flex-direction:column;gap:10px;">
+      <div style="background:var(--surface2);border-radius:10px;padding:16px;">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">
+          <span style="background:rgba(79,142,247,0.15);color:var(--accent);font-size:10px;font-weight:700;padding:2px 8px;border-radius:20px;">7월 예상</span>
+          <span style="font-size:11px;color:var(--muted);">VAT 포함</span>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:8px;">
+          <div style="display:flex;justify-content:space-between;align-items:center;background:var(--surface);border-radius:8px;padding:10px 12px;">
+            <span style="font-size:11px;color:var(--muted);">온라인 마감 예상</span>
+            <span style="font-size:14px;font-weight:900;color:var(--accent);">65,000,000원</span>
+          </div>
+          <div style="display:flex;justify-content:space-between;align-items:center;background:var(--surface);border-radius:8px;padding:8px 12px;">
+            <span style="font-size:11px;color:var(--muted);">7월 목표</span>
+            <span style="font-size:13px;font-weight:700;color:var(--text);">50,000,000원</span>
+          </div>
+          <div style="display:flex;justify-content:space-between;align-items:center;background:var(--surface);border-radius:8px;padding:8px 12px;border:1px solid rgba(34,197,94,0.3);">
+            <span style="font-size:11px;font-weight:700;">목표 대비 예상 달성률</span>
+            <span style="font-size:14px;font-weight:900;color:var(--green);">130.0%</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="grid row-main" style="margin-bottom:16px;">
+  <div class="card">
+    <div class="section-title">월별 채널별 매출 추이 (최근 6개월)</div>
+    <div class="chart-wrap"><canvas id="salesChart"></canvas></div>
+    <div class="goal-section">
+      <div class="goal-row">
+        <div class="goal-top"><span class="goal-label">2026-01</span><span class="goal-pct">103.6%</span></div>
+        <div class="goal-bar-bg"><div class="goal-bar-fill" style="width:100%"></div></div>
+      </div>
+      <div class="goal-row">
+        <div class="goal-top"><span class="goal-label">2026-02</span><span class="goal-pct">97.2%</span></div>
+        <div class="goal-bar-bg"><div class="goal-bar-fill" style="width:97.2%"></div></div>
+      </div>
+      <div class="goal-row">
+        <div class="goal-top"><span class="goal-label">2026-03</span><span class="goal-pct">102.7%</span></div>
+        <div class="goal-bar-bg"><div class="goal-bar-fill" style="width:100%"></div></div>
+      </div>
+      <div class="goal-row">
+        <div class="goal-top"><span class="goal-label">2026-04</span><span class="goal-pct">107.2%</span></div>
+        <div class="goal-bar-bg"><div class="goal-bar-fill" style="width:100%"></div></div>
+      </div>
+      <div class="goal-row">
+        <div class="goal-top"><span class="goal-label">2026-05</span><span class="goal-pct">119.8%</span></div>
+        <div class="goal-bar-bg"><div class="goal-bar-fill" style="width:100%"></div></div>
+      </div>
+      <div class="goal-row">
+        <div class="goal-top"><span class="goal-label">2026-06</span><span class="goal-pct">86.2%</span></div>
+        <div class="goal-bar-bg"><div class="goal-bar-fill" style="width:86.2%;background:linear-gradient(90deg,#ef4444,#f59e0b);"></div></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="section-title">채널별 매출 상세</div>
+    <div class="month-tabs" id="monthTabs">
+      <div class="month-tab" data-month="1">1월</div>
+      <div class="month-tab" data-month="2">2월</div>
+      <div class="month-tab" data-month="3">3월</div>
+      <div class="month-tab" data-month="4">4월</div>
+      <div class="month-tab" data-month="5">5월</div>
+      <div class="month-tab active" data-month="6">6월</div>
+    </div>
+    <div id="channelTableWrap"></div>
+  </div>
+</div>
+
+<div class="card" style="margin-bottom:16px;">
+  <div class="section-title">아이템별 매출 순위</div>
+  <div class="rank-controls">
+    <select class="rank-select" id="rankSortBy" onchange="renderRankTable()">
+      <option value="cumulative">누적 매출순</option>
+      <option value="r30">최근 30일 매출순</option>
+      <option value="r7">최근 7일 매출순</option>
+      <option value="qty">누적 수량순</option>
+    </select>
+    <input type="text" class="rank-search" id="rankSearch" placeholder="상품명 검색..." oninput="renderRankTable()">
+    <span class="rank-count" id="rankCount"></span>
+  </div>
+  <div style="overflow-x:auto;">
+    <table class="rank-table">
+      <thead>
+        <tr>
+          <th>순위</th><th>상품명</th><th>누적 수량</th><th>누적 매출</th><th>최근 30일</th><th>최근 7일</th>
+        </tr>
+      </thead>
+      <tbody id="rankTableBody"></tbody>
+    </table>
+  </div>
+  <div class="rank-pagination" id="rankPagination"></div>
+</div>
+
+<div class="card" style="margin-bottom:16px;">
+  <div class="section-title">7월 행사 일정</div>
+  <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;">
+    <div style="background:var(--surface2);border-radius:10px;padding:16px;">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+        <span class="event-tag tag-plan">준비중</span>
+        <span style="font-size:11px;color:var(--muted);">7/1 ~ 7/31</span>
+      </div>
+      <div style="font-size:13px;font-weight:700;line-height:1.4;">크리스타 식기건조대<br>사은품 행사</div>
+      <div style="font-size:11px;color:var(--muted);margin-top:6px;">구매 시 머들러 무료 증정</div>
+    </div>
+    <div style="background:var(--surface2);border-radius:10px;padding:16px;">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+        <span class="event-tag tag-plan">준비중</span>
+        <span style="font-size:11px;color:var(--muted);">7/8 ~ 7/19</span>
+      </div>
+      <a href="https://docs.google.com/spreadsheets/d/1uFQ1W8sZZlRasPsg9qWrTqnoU4glamAXtZ9OKmzM6IA/edit?usp=sharing" target="_blank" style="text-decoration:none;">
+        <div style="font-size:13px;font-weight:700;line-height:1.4;color:var(--text);">자사몰 · 네이버<br>상반기 결산</div>
+        <div style="font-size:11px;color:var(--accent);margin-top:6px;">상반기 채널별 매출 결산 ↗</div>
+      </a>
+    </div>
+    <div style="background:var(--surface2);border-radius:10px;padding:16px;">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+        <span class="event-tag tag-plan">준비중</span>
+        <span style="font-size:11px;color:var(--muted);">일정 미확정</span>
+      </div>
+      <div style="font-size:13px;font-weight:700;line-height:1.4;">오늘의집 크리스타<br>식기건조대 공구행사</div>
+      <div style="font-size:11px;color:var(--muted);margin-top:6px;">오늘의집 플랫폼 공동구매 행사</div>
+    </div>
+  </div>
+</div>
+
+<div class="grid" style="grid-template-columns:1fr 1fr;gap:16px;">
+  <div class="card">
+    <div class="section-title">6월 행사 결과</div>
+    <div style="background:var(--surface2);border-radius:10px;padding:16px;">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+        <span class="event-tag tag-active">완료</span>
+        <span style="font-size:11px;color:var(--muted);">6/5 ~ 6/21</span>
+      </div>
+      <div style="font-size:13px;font-weight:700;line-height:1.4;margin-bottom:12px;">자사몰 · 네이버 컵 골라담기 행사</div>
+      <div style="display:flex;flex-direction:column;gap:8px;">
+        <div style="display:flex;justify-content:space-between;align-items:center;background:var(--surface);border-radius:8px;padding:8px 12px;">
+          <span style="font-size:11px;color:var(--muted);">스토어팜</span>
+          <span style="font-size:13px;font-weight:700;color:var(--accent);">912,260원</span>
+        </div>
+        <div style="display:flex;justify-content:space-between;align-items:center;background:var(--surface);border-radius:8px;padding:8px 12px;">
+          <span style="font-size:11px;color:var(--muted);">나인마켓</span>
+          <span style="font-size:13px;font-weight:700;color:var(--accent);">706,600원</span>
+        </div>
+        <div style="display:flex;justify-content:space-between;align-items:center;background:var(--surface);border-radius:8px;padding:8px 12px;border:1px solid var(--border);">
+          <span style="font-size:11px;font-weight:700;">합계</span>
+          <span style="font-size:14px;font-weight:900;color:var(--green);">1,618,860원</span>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="card">
+    <div class="section-title">업무 진행사항</div>
+    <div style="display:flex;flex-direction:column;gap:10px;">
+      <div class="task-item">
+        <div class="task-dot dot-wait"></div>
+        <div class="task-body">
+          <div class="task-title">베네피아 전자계약 체결</div>
+          <div class="task-desc">전자계약 체결 대기 중</div>
+          <span class="task-status status-wait">대기중</span>
+        </div>
+      </div>
+      <div class="task-item">
+        <div class="task-dot dot-progress"></div>
+        <div class="task-body">
+          <div class="task-title">삼성카드 일일특가 행사 제안</div>
+          <div class="task-desc">삼성카드 채널 일일특가 행사 제안 진행</div>
+          <span class="task-status status-progress">진행중</span>
+        </div>
+      </div>
+      <div class="task-item" style="border-bottom:none;">
+        <div class="task-dot dot-progress"></div>
+        <div class="task-body">
+          <div class="task-title">이지웰 특가중독 WOW 행사 제안</div>
+          <div class="task-desc">이지웰 복지몰 특가중독 WOW 행사 제안 진행</div>
+          <span class="task-status status-progress">진행중</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+const channelData={
+  1:{total:'51,777,210',channels:[
+    {name:'스마트스토어',pct:100,amount:'29,494,330'},{name:'자사몰',pct:39,amount:'11,458,300'},
+    {name:'29CM',pct:14,amount:'2,101,000'},{name:'오늘의집',pct:16,amount:'2,430,000'},
+    {name:'W컨셉',pct:5,amount:'150,000'},{name:'마켓컬리',pct:18,amount:'1,200,000'},
+    {name:'쿠팡',pct:8,amount:'380,000'},{sub:true,name:'복지몰'},
+    {name:'현대M',indent:true,pct:12,amount:'820,000'},{name:'이지웰',indent:true,pct:4,amount:'200,000'},
+    {name:'블루베리',indent:true,pct:6,amount:'400,000'},{name:'원룸만들기',pct:2,amount:'143,580'}]},
+  2:{total:'48,619,000',channels:[
+    {name:'스마트스토어',pct:100,amount:'32,788,590'},{name:'자사몰',pct:18,amount:'6,020,000'},
+    {name:'29CM',pct:11,amount:'1,890,000'},{name:'오늘의집',pct:14,amount:'2,100,000'},
+    {name:'W컨셉',pct:4,amount:'110,000'},{name:'마켓컬리',pct:15,amount:'980,000'},
+    {name:'쿠팡',pct:6,amount:'210,000'},{sub:true,name:'복지몰'},
+    {name:'현대M',indent:true,pct:10,amount:'700,000'},{name:'이지웰',indent:true,pct:3,amount:'150,000'},
+    {name:'블루베리',indent:true,pct:5,amount:'320,000'},{name:'원룸만들기',pct:2,amount:'150,410'}]},
+  3:{total:'51,325,730',channels:[
+    {name:'스마트스토어',pct:100,amount:'31,440,720'},{name:'자사몰',pct:35,amount:'11,134,300'},
+    {name:'29CM',pct:12,amount:'1,950,000'},{name:'오늘의집',pct:11,amount:'1,800,000'},
+    {name:'W컨셉',pct:4,amount:'100,000'},{name:'마켓컬리',pct:14,amount:'1,050,000'},
+    {name:'쿠팡',pct:5,amount:'190,000'},{sub:true,name:'복지몰'},
+    {name:'현대M',indent:true,pct:11,amount:'830,000'},{name:'이지웰',indent:true,pct:4,amount:'180,000'},
+    {name:'블루베리',indent:true,pct:7,amount:'450,000'},{name:'원룸만들기',pct:2,amount:'200,710'}]},
+  4:{total:'53,595,000',channels:[
+    {name:'스마트스토어',pct:100,amount:'23,322,590'},{name:'자사몰',pct:100,amount:'24,251,300'},
+    {name:'29CM',pct:11,amount:'1,700,000'},{name:'오늘의집',pct:13,amount:'2,000,000'},
+    {name:'W컨셉',pct:3,amount:'80,000'},{name:'마켓컬리',pct:10,amount:'750,000'},
+    {name:'쿠팡',pct:4,amount:'100,000'},{sub:true,name:'복지몰'},
+    {name:'현대M',indent:true,pct:10,amount:'620,000'},{name:'이지웰',indent:true,pct:3,amount:'120,000'},
+    {name:'블루베리',indent:true,pct:6,amount:'300,000'},{name:'원룸만들기',pct:1,amount:'151,110'}]},
+  5:{total:'59,888,030',channels:[
+    {name:'스마트스토어',pct:100,amount:'23,459,630'},{name:'자사몰',pct:100,amount:'28,834,190'},
+    {name:'29CM',pct:12,amount:'1,950,000'},{name:'오늘의집',pct:14,amount:'2,200,000'},
+    {name:'W컨셉',pct:4,amount:'100,000'},{name:'마켓컬리',pct:11,amount:'900,000'},
+    {name:'쿠팡',pct:5,amount:'140,000'},{sub:true,name:'복지몰'},
+    {name:'현대M',indent:true,pct:13,amount:'850,000'},{name:'이지웰',indent:true,pct:4,amount:'190,000'},
+    {name:'블루베리',indent:true,pct:8,amount:'450,000'},{name:'원룸만들기',pct:1,amount:'164,210'}]},
+  6:{total:'43,103,915',channels:[
+    {name:'스마트스토어',pct:100,amount:'18,620,960'},{name:'자사몰',pct:90,amount:'16,854,100'},
+    {name:'29CM',pct:50,amount:'2,202,000'},{name:'오늘의집',pct:48,amount:'2,793,700'},
+    {name:'W컨셉',pct:18,amount:'70,800'},{name:'마켓컬리',pct:40,amount:'822,900'},
+    {name:'쿠팡',pct:22,amount:'47,700'},{sub:true,name:'복지몰'},
+    {name:'현대M',indent:true,pct:43,amount:'806,650'},{name:'이지웰',indent:true,pct:8,amount:'159,500'},
+    {name:'블루베리',indent:true,pct:18,amount:'338,705'},{name:'원룸만들기',pct:3,amount:'41,900'}]}
+};
+
+function renderChannelTable(month){
+  const d=channelData[month];
+  let html=`<table class="channel-table"><thead><tr><th>채널</th><th>비중</th><th>금액</th></tr></thead><tbody>`;
+  for(const ch of d.channels){
+    if(ch.sub){html+=`<tr><td class="ch-name" style="color:var(--accent2);font-size:10px;padding-top:10px;">▸ ${ch.name}</td><td></td><td></td></tr>`;continue;}
+    const ind=ch.indent?'padding-left:10px;':'';
+    html+=`<tr><td class="ch-name" style="${ind}">${ch.name}</td><td><div class="ch-bar-wrap"><div class="ch-bar" style="width:${ch.pct}%"></div></div></td><td class="ch-amount">${ch.amount}</td></tr>`;
+  }
+  html+=`</tbody></table><div style="margin-top:14px;padding-top:12px;border-top:1px solid var(--border);display:flex;justify-content:space-between;font-size:12px;"><span style="color:var(--muted);">${month}월 합계</span><span style="font-weight:900;color:var(--accent);">${d.total}원</span></div>`;
+  document.getElementById('channelTableWrap').innerHTML=html;
+}
+document.getElementById('monthTabs').addEventListener('click',e=>{
+  const tab=e.target.closest('.month-tab');if(!tab)return;
+  document.querySelectorAll('.month-tab').forEach(t=>t.classList.remove('active'));
+  tab.classList.add('active');renderChannelTable(parseInt(tab.dataset.month));
+});
+renderChannelTable(6);
+
+const rankData=[
+  {rank:1,code:'10_10_001_1011',name:'볼륨 식기건조대 와이드 (크림화이트)',qty:1261,cumulative:68239130,r30:10789880,r7:2431620},
+  {rank:2,code:'10_10_001_1001',name:'볼륨 식기건조대 와이드 컬러에디션 (화이트)',qty:827,cumulative:44784370,r30:9030440,r7:1671870},
+  {rank:3,code:'10_10_005_1000',name:'리얼스텐 싱크볼 건조대',qty:1009,cumulative:39081730,r30:16217970,r7:2578500},
+  {rank:4,code:'10_10_002_1011',name:'볼륨 식기건조대 컴팩트 (크림화이트)',qty:204,cumulative:9853950,r30:1510810,r7:194000},
+  {rank:5,code:'10_10_002_1001',name:'볼륨 식기건조대 컴팩트 컬러에디션 (화이트)',qty:176,cumulative:8704240,r30:1267240,r7:100000},
+  {rank:6,code:'10_20_072_1011',name:'모노 스테인레스 휴대용수저세트 (아이보리)',qty:491,cumulative:7342860,r30:541320,r7:95400},
+  {rank:7,code:'10_10_001_1031',name:'볼륨 식기건조대 와이드 컬러에디션 (핑크)',qty:120,cumulative:6463330,r30:1084110,r7:308370},
+  {rank:8,code:'10_10_003_1001',name:'크리스타 식기건조대 수저통세트 (클리어)',qty:65,cumulative:6296050,r30:1207000,r7:178000},
+  {rank:9,code:'10_20_072_1051',name:'모노 스테인레스 휴대용수저세트 (그린)',qty:337,cumulative:6051100,r30:353700,r7:31800},
+  {rank:10,code:'10_10_004_1011',name:'코튼 식기건조대 (화이트)',qty:121,cumulative:2855360,r30:127880,r7:51490},
+  {rank:11,code:'10_20_028_7100',name:'퓨어 사각 파스타볼 1P',qty:161,cumulative:2555610,r30:428800,r7:130000},
+  {rank:12,code:'10_02_039_7100',name:'퓨어 라지 샐러드볼 1P',qty:142,cumulative:2479300,r30:467000,r7:94500},
+  {rank:13,code:'10_20_500_1012',name:'올디너리 테이블세트 (빈티지아이보리)',qty:113,cumulative:2023080,r30:174540,r7:10870},
+  {rank:14,code:'10_20_026_7100',name:'퓨어 시리얼볼 1P',qty:152,cumulative:2020920,r30:579250,r7:93000},
+  {rank:15,code:'10_20_540_1371',name:'모노 도시락통 세트(아이보리+옐로우)',qty:71,cumulative:1843900,r30:336700,r7:51800},
+  {rank:16,code:'10_20_021_3011',name:'프렌즈 시리얼볼 1P (아이보리)',qty:248,cumulative:1738250,r30:119000,r7:42000},
+  {rank:17,code:'10_20_540_1333',name:'모노 도시락통 세트(레드+옐로우)',qty:58,cumulative:1529200,r30:284900,r7:77700},
+  {rank:18,code:'10_10_003_1051',name:'크리스타 식기건조대 수저통세트 (파인그린)',qty:16,cumulative:1554000,r30:267000,r7:79000},
+  {rank:19,code:'10_20_540_1300',name:'모노 도시락통 세트(아이보리+투명)',qty:58,cumulative:1549700,r30:464300,r7:141500},
+  {rank:20,code:'10_20_542_2300',name:'어린이식기세트',qty:58,cumulative:1409060,r30:139000,r7:69500},
+  {rank:21,code:'10_20_540_1334',name:'모노 도시락통 세트(아이보리+핑크)',qty:53,cumulative:1406200,r30:334800,r7:89700},
+  {rank:22,code:'10_20_022_3011',name:'프렌즈 원형 파스타볼 1P (아이보리)',qty:140,cumulative:1189520,r30:114000,r7:6000},
+  {rank:23,code:'10_40_001_4011',name:'스마일 주걱 (화이트)',qty:251,cumulative:1209250,r30:320000,r7:0},
+  {rank:24,code:'10_90_005_1051',name:'새싹 배수구손잡이 4P',qty:265,cumulative:1348100,r30:196600,r7:66400},
+  {rank:25,code:'10_20_541_1400',name:'모노 도시락통 소분용기 2개(투명)',qty:79,cumulative:1090100,r30:125100,r7:69500},
+  {rank:26,code:'10_61_007_5083',name:'프렌즈 트레이 L (블랙)',qty:79,cumulative:1056900,r30:65000,r7:0},
+  {rank:27,code:'10_20_530_1319',name:'포레 홈 1인 식기세트 3P (아이보리)',qty:86,cumulative:1143400,r30:125100,r7:54600},
+  {rank:28,code:'10_20_540_1621',name:'모노 도시락통 세트(투명+그레이)',qty:33,cumulative:846110,r30:207200,r7:51800},
+  {rank:29,code:'10_10_100_7011',name:'구성품 식기건조대 물받이',qty:151,cumulative:749500,r30:129500,r7:70000},
+  {rank:30,code:'10_20_057_1200',name:'퓨어 손잡이컵 2P',qty:60,cumulative:734740,r30:215840,r7:44000},
+];
+
+let rankPage=1;const rankPerPage=10;
+function fmt(n){if(!n||n===0)return'-';return n.toLocaleString();}
+
+function renderRankTable(){
+  const sortBy=document.getElementById('rankSortBy').value;
+  const search=document.getElementById('rankSearch').value.trim().toLowerCase();
+  let filtered=rankData.filter(d=>d.name.toLowerCase().includes(search));
+  filtered.sort((a,b)=>b[sortBy]-a[sortBy]);
+  document.getElementById('rankCount').textContent=`총 ${filtered.length}개 상품`;
+  const totalPages=Math.ceil(filtered.length/rankPerPage);
+  if(rankPage>totalPages)rankPage=1;
+  const start=(rankPage-1)*rankPerPage;
+  const page=filtered.slice(start,start+rankPerPage);
+  let html='';
+  page.forEach((d,i)=>{
+    const dr=start+i+1;
+    let bc='rank-n';
+    if(dr===1)bc='rank-1';else if(dr===2)bc='rank-2';else if(dr===3)bc='rank-3';
+    html+=`<tr><td><span class="rank-badge ${bc}">${dr}</span></td><td><div class="rank-name">${d.name}</div><div class="rank-code">${d.code}</div></td><td>${fmt(d.qty)}</td><td class="amount-accent">${fmt(d.cumulative)}</td><td>${fmt(d.r30)}</td><td>${fmt(d.r7)}</td></tr>`;
+  });
+  document.getElementById('rankTableBody').innerHTML=html;
+  let ph='';
+  for(let p=1;p<=totalPages;p++){ph+=`<button class="page-btn ${p===rankPage?'active':''}" onclick="goPage(${p})">${p}</button>`;}
+  document.getElementById('rankPagination').innerHTML=ph;
+}
+function goPage(p){rankPage=p;renderRankTable();}
+renderRankTable();
+
+const d=new Date();
+document.getElementById('today-date').textContent=`${d.getFullYear()}.${String(d.getMonth()+1).padStart(2,'0')}.${String(d.getDate()).padStart(2,'0')}`;
+
+new Chart(document.getElementById('salesChart').getContext('2d'),{
+  type:'bar',
+  data:{
+    labels:['1월','2월','3월','4월','5월','6월'],
+    datasets:[
+      {label:'자사몰',data:[11458300,6020000,11134300,24251300,28834190,16854100],backgroundColor:'rgba(79,142,247,0.8)',borderRadius:4,borderSkipped:false},
+      {label:'스마트스토어',data:[29494330,32788590,31440720,23322590,23459630,18620960],backgroundColor:'rgba(124,92,252,0.8)',borderRadius:4,borderSkipped:false},
+      {label:'기타채널',data:[10824580,9811410,8750710,6022110,7594210,7628855],backgroundColor:'rgba(245,158,11,0.6)',borderRadius:4,borderSkipped:false}
+    ]
+  },
+  options:{
+    responsive:true,maintainAspectRatio:false,
+    plugins:{
+      legend:{labels:{color:'#7a7f9a',font:{size:11,family:'Noto Sans KR'},boxWidth:10,padding:12}},
+      tooltip:{callbacks:{label:ctx=>` ${ctx.dataset.label}: ${ctx.parsed.y.toLocaleString()}원`}}
+    },
+    scales:{
+      x:{stacked:true,grid:{display:false},ticks:{color:'#7a7f9a',font:{size:11}}},
+      y:{stacked:true,grid:{color:'rgba(255,255,255,0.04)'},ticks:{color:'#7a7f9a',font:{size:10},callback:v=>(v/1000000).toFixed(0)+'M'}}
+    }
+  }
+});
+</script>
+</body>
+</html>
