@@ -363,50 +363,45 @@
 </div>
 
 <script>
-const channelData={
-  1:{total:'51,777,210',channels:[
-    {name:'스마트스토어',pct:100,amount:'29,494,330'},{name:'자사몰',pct:39,amount:'11,458,300'},
-    {name:'29CM',pct:14,amount:'2,101,000'},{name:'오늘의집',pct:16,amount:'2,430,000'},
-    {name:'W컨셉',pct:5,amount:'150,000'},{name:'마켓컬리',pct:18,amount:'1,200,000'},
-    {name:'쿠팡',pct:8,amount:'380,000'},{sub:true,name:'복지몰'},
-    {name:'현대M',indent:true,pct:12,amount:'820,000'},{name:'이지웰',indent:true,pct:4,amount:'200,000'},
-    {name:'블루베리',indent:true,pct:6,amount:'400,000'},{name:'원룸만들기',pct:2,amount:'143,580'}]},
-  2:{total:'48,619,000',channels:[
-    {name:'스마트스토어',pct:100,amount:'32,788,590'},{name:'자사몰',pct:18,amount:'6,020,000'},
-    {name:'29CM',pct:11,amount:'1,890,000'},{name:'오늘의집',pct:14,amount:'2,100,000'},
-    {name:'W컨셉',pct:4,amount:'110,000'},{name:'마켓컬리',pct:15,amount:'980,000'},
-    {name:'쿠팡',pct:6,amount:'210,000'},{sub:true,name:'복지몰'},
-    {name:'현대M',indent:true,pct:10,amount:'700,000'},{name:'이지웰',indent:true,pct:3,amount:'150,000'},
-    {name:'블루베리',indent:true,pct:5,amount:'320,000'},{name:'원룸만들기',pct:2,amount:'150,410'}]},
-  3:{total:'51,325,730',channels:[
-    {name:'스마트스토어',pct:100,amount:'31,440,720'},{name:'자사몰',pct:35,amount:'11,134,300'},
-    {name:'29CM',pct:12,amount:'1,950,000'},{name:'오늘의집',pct:11,amount:'1,800,000'},
-    {name:'W컨셉',pct:4,amount:'100,000'},{name:'마켓컬리',pct:14,amount:'1,050,000'},
-    {name:'쿠팡',pct:5,amount:'190,000'},{sub:true,name:'복지몰'},
-    {name:'현대M',indent:true,pct:11,amount:'830,000'},{name:'이지웰',indent:true,pct:4,amount:'180,000'},
-    {name:'블루베리',indent:true,pct:7,amount:'450,000'},{name:'원룸만들기',pct:2,amount:'200,710'}]},
-  4:{total:'53,595,000',channels:[
-    {name:'스마트스토어',pct:100,amount:'23,322,590'},{name:'자사몰',pct:100,amount:'24,251,300'},
-    {name:'29CM',pct:11,amount:'1,700,000'},{name:'오늘의집',pct:13,amount:'2,000,000'},
-    {name:'W컨셉',pct:3,amount:'80,000'},{name:'마켓컬리',pct:10,amount:'750,000'},
-    {name:'쿠팡',pct:4,amount:'100,000'},{sub:true,name:'복지몰'},
-    {name:'현대M',indent:true,pct:10,amount:'620,000'},{name:'이지웰',indent:true,pct:3,amount:'120,000'},
-    {name:'블루베리',indent:true,pct:6,amount:'300,000'},{name:'원룸만들기',pct:1,amount:'151,110'}]},
-  5:{total:'59,888,030',channels:[
-    {name:'스마트스토어',pct:100,amount:'23,459,630'},{name:'자사몰',pct:100,amount:'28,834,190'},
-    {name:'29CM',pct:12,amount:'1,950,000'},{name:'오늘의집',pct:14,amount:'2,200,000'},
-    {name:'W컨셉',pct:4,amount:'100,000'},{name:'마켓컬리',pct:11,amount:'900,000'},
-    {name:'쿠팡',pct:5,amount:'140,000'},{sub:true,name:'복지몰'},
-    {name:'현대M',indent:true,pct:13,amount:'850,000'},{name:'이지웰',indent:true,pct:4,amount:'190,000'},
-    {name:'블루베리',indent:true,pct:8,amount:'450,000'},{name:'원룸만들기',pct:1,amount:'164,210'}]},
-  6:{total:'43,103,915',channels:[
-    {name:'스마트스토어',pct:100,amount:'18,620,960'},{name:'자사몰',pct:90,amount:'16,854,100'},
-    {name:'29CM',pct:50,amount:'2,202,000'},{name:'오늘의집',pct:48,amount:'2,793,700'},
-    {name:'W컨셉',pct:18,amount:'70,800'},{name:'마켓컬리',pct:40,amount:'822,900'},
-    {name:'쿠팡',pct:22,amount:'47,700'},{sub:true,name:'복지몰'},
-    {name:'현대M',indent:true,pct:43,amount:'806,650'},{name:'이지웰',indent:true,pct:8,amount:'159,500'},
-    {name:'블루베리',indent:true,pct:18,amount:'338,705'},{name:'원룸만들기',pct:3,amount:'41,900'}]}
+// 엑셀 실제 데이터 기준 (nineware_통합마스터_v46.xlsx - 7-2시트)
+function pct(val, total){ return total ? Math.round(val/total*100) : 0; }
+function fmtN(n){ return n ? n.toLocaleString() : '0'; }
+
+const rawData = {
+  1: { 자사몰:11458300, 스마트스토어:29494330, 쿠팡:0, '29CM':1560600, W컨셉:599850, 마켓컬리:1377000, 오늘의집:5598200, 현대M:200400, 이지웰:0, 블루베리:0, 원룸만들기:364430, 카카오:193500, total:51777210 },
+  2: { 자사몰:6020000, 스마트스토어:32788590, 쿠팡:0, '29CM':2297050, W컨셉:120500, 마켓컬리:1311000, 오늘의집:4374400, 현대M:0, 이지웰:0, 블루베리:0, 원룸만들기:386760, 카카오:140000, total:48620800 },
+  3: { 자사몰:11134300, 스마트스토어:31440720, 쿠팡:18000, '29CM':2410600, W컨셉:31100, 마켓컬리:409400, 오늘의집:4050800, 현대M:0, 이지웰:0, 블루베리:0, 원룸만들기:859210, 카카오:98000, total:51325730 },
+  4: { 자사몰:24251300, 스마트스토어:23322590, 쿠팡:0, '29CM':1586300, W컨셉:83100, 마켓컬리:1017800, 오늘의집:2220900, 현대M:0, 이지웰:0, 블루베리:0, 원룸만들기:332970, 카카오:62400, total:53596560 },
+  5: { 자사몰:28834190, 스마트스토어:23459630, 쿠팡:0, '29CM':1902650, W컨셉:15800, 마켓컬리:572700, 오늘의집:2368100, 현대M:1711930, 이지웰:0, 블루베리:279730, 원룸만들기:72600, 카카오:335900, total:59888030 },
+  6: { 자사몰:16854100, 스마트스토어:18620960, 쿠팡:47700, '29CM':2202000, W컨셉:70800, 마켓컬리:822900, 오늘의집:2793700, 현대M:806650, 이지웰:159500, 블루베리:338705, 원룸만들기:41900, 카카오:290000, total:43103915 },
 };
+
+function buildChannelData(m) {
+  const d = rawData[m];
+  const t = d.total;
+  const welfareTotal = d.현대M + d.이지웰 + d.블루베리;
+  return {
+    total: t.toLocaleString(),
+    channels: [
+      {name:'스마트스토어', pct:pct(d.스마트스토어,t), amount:fmtN(d.스마트스토어)},
+      {name:'자사몰', pct:pct(d.자사몰,t), amount:fmtN(d.자사몰)},
+      {name:'29CM', pct:pct(d['29CM'],t), amount:fmtN(d['29CM'])},
+      {name:'오늘의집', pct:pct(d.오늘의집,t), amount:fmtN(d.오늘의집)},
+      {name:'W컨셉', pct:pct(d.W컨셉,t), amount:fmtN(d.W컨셉)},
+      {name:'마켓컬리', pct:pct(d.마켓컬리,t), amount:fmtN(d.마켓컬리)},
+      {name:'쿠팡', pct:pct(d.쿠팡,t), amount:fmtN(d.쿠팡)},
+      {name:'카카오', pct:pct(d.카카오,t), amount:fmtN(d.카카오)},
+      ...(welfareTotal > 0 ? [
+        {sub:true, name:'복지몰'},
+        ...(d.현대M > 0 ? [{name:'현대M', indent:true, pct:pct(d.현대M,t), amount:fmtN(d.현대M)}] : []),
+        ...(d.이지웰 > 0 ? [{name:'이지웰', indent:true, pct:pct(d.이지웰,t), amount:fmtN(d.이지웰)}] : []),
+        ...(d.블루베리 > 0 ? [{name:'블루베리', indent:true, pct:pct(d.블루베리,t), amount:fmtN(d.블루베리)}] : []),
+      ] : []),
+      {name:'원룸만들기', pct:pct(d.원룸만들기,t), amount:fmtN(d.원룸만들기)},
+    ]
+  };
+}
+const channelData = {1:buildChannelData(1),2:buildChannelData(2),3:buildChannelData(3),4:buildChannelData(4),5:buildChannelData(5),6:buildChannelData(6)};
 
 function renderChannelTable(month){
   const d=channelData[month];
@@ -497,7 +492,7 @@ new Chart(document.getElementById('salesChart').getContext('2d'),{
     datasets:[
       {label:'자사몰',data:[11458300,6020000,11134300,24251300,28834190,16854100],backgroundColor:'rgba(79,142,247,0.8)',borderRadius:4,borderSkipped:false},
       {label:'스마트스토어',data:[29494330,32788590,31440720,23322590,23459630,18620960],backgroundColor:'rgba(124,92,252,0.8)',borderRadius:4,borderSkipped:false},
-      {label:'기타채널',data:[10824580,9811410,8750710,6022110,7594210,7628855],backgroundColor:'rgba(245,158,11,0.6)',borderRadius:4,borderSkipped:false}
+      {label:'기타채널',data:[10824580,9812210,8750710,5022670,7594210,7628855],backgroundColor:'rgba(245,158,11,0.6)',borderRadius:4,borderSkipped:false}
     ]
   },
   options:{
